@@ -37,6 +37,14 @@ The mirror currently publishes two CUDA variants for each vLLM version:
 | CUDA 12.9 (`cu129`) | `v0.23.0-cu129-ubuntu2404` | `v0.23.0-cu129-ubuntu2404` |
 | CUDA 13 (`cu13`) | `v0.23.0-ubuntu2404` | `v0.23.0-ubuntu2404` |
 
+Nightly images can also be mirrored by their full vLLM commit SHA. The source
+uses different tag prefixes for the two CUDA variants:
+
+| CUDA variant | Docker Hub source tag | GHCR mirror tag |
+| --- | --- | --- |
+| CUDA 12.9 (`cu129`) | `cu129-nightly-<commit>` | `cu129-nightly-<commit>` |
+| CUDA 13 (`cu13`) | `nightly-<commit>` | `nightly-<commit>` |
+
 The tag is unchanged when the image is copied. Only the registry and image
 owner/name change.
 
@@ -78,8 +86,9 @@ echo "$CR_PAT" | docker login ghcr.io -u GITHUB_USER --password-stdin
 
 GitHub Actions keeps the GHCR package synchronized with Docker Hub:
 
-- [Mirror vLLM version](.github/workflows/mirror-vllm.yml) manually mirrors a
-  requested version. Enter `0.23.0` or `v0.23.0` in the **vllm_version** input.
+- [Mirror vLLM reference](.github/workflows/mirror-vllm.yml) manually mirrors a
+  requested release or nightly commit. Enter `0.23.0`, `v0.23.0`, or a full
+  40-character commit SHA in the **vllm_ref** input.
 - [Mirror latest vLLM image](.github/workflows/mirror-vllm-daily.yml) runs every
   day at `03:17 UTC`, finds the newest version with both CUDA tags, and mirrors
   both variants. It can also be started manually.

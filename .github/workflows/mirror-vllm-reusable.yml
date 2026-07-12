@@ -3,8 +3,8 @@ name: Mirror vLLM image
 on:
   workflow_call:
     inputs:
-      vllm_version:
-        description: vLLM version without the leading v
+      vllm_ref:
+        description: vLLM release or full nightly commit SHA
         required: true
         type: string
 
@@ -16,40 +16,48 @@ env:
   SOURCE_IMAGE: docker.io/vllm/vllm-openai
 
 jobs:
-  validate-version:
-    name: Validate vLLM version
+  validate_ref:
+    name: Validate vLLM reference
     runs-on: ubuntu-latest
     outputs:
-      vllm_version: ${{ steps.version.outputs.vllm_version }}
+      vllm_ref: ${{ steps.ref.outputs.vllm_ref }}
+      ref_type: ${{ steps.ref.outputs.ref_type }}
     steps:
-      - name: Normalize version
-        id: version
+      - name: Normalize reference
+        id: ref
         env:
-          INPUT_VERSION: ${{ inputs.vllm_version }}
+          INPUT_REF: ${{ inputs.vllm_ref }}
         shell: bash
         run: |
           set -euo pipefail
 
-          version="${INPUT_VERSION#v}"
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "vllm_version must match X.Y.Z or vX.Y.Z" >&2
+          reference="${INPUT_REF#v}"
+          if [[ "$reference" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            ref_type="release"
+          elif [[ "$reference" =~ ^[0-9a-f]{40}$ ]]; then
+            ref_type="nightly"
+          else
+            echo "vllm_ref must match X.Y.Z, vX.Y.Z, or a 40-character lowercase commit SHA" >&2
             exit 1
           fi
 
-          echo "vllm_version=$version" >> "$GITHUB_OUTPUT"
+          echo "vllm_ref=$reference" >> "$GITHUB_OUTPUT"
+          echo "ref_type=$ref_type" >> "$GITHUB_OUTPUT"
 
   mirror:
-    name: Mirror ${{ matrix.cuda }}
-    needs: validate-version
+    name: Mirror ${{ matrix.cuda }} ${{ needs.validate_ref.outputs.ref_type }}
+    needs: validate_ref
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
           - cuda: cu129
-            tag_suffix: -cu129-ubuntu2404
+            release_tag_suffix: -cu129-ubuntu2404
+            nightly_tag_prefix: cu129-nightly-
           - cuda: cu13
-            tag_suffix: -ubuntu2404
+            release_tag_suffix: -ubuntu2404
+            nightly_tag_prefix: nightly-
     steps:
       - name: Install Skopeo
         shell: bash
@@ -71,13 +79,27 @@ jobs:
 
       - name: Mirror image
         env:
-          VLLM_VERSION: ${{ needs.validate-version.outputs.vllm_version }}
-          TAG_SUFFIX: ${{ matrix.tag_suffix }}
+          VLLM_REF: ${{ needs.validate_ref.outputs.vllm_ref }}
+          REF_TYPE: ${{ needs.validate_ref.outputs.ref_type }}
+          RELEASE_TAG_SUFFIX: ${{ matrix.release_tag_suffix }}
+          NIGHTLY_TAG_PREFIX: ${{ matrix.nightly_tag_prefix }}
         shell: bash
         run: |
           set -euo pipefail
 
-          source_tag="v${VLLM_VERSION}${TAG_SUFFIX}"
+          case "$REF_TYPE" in
+            release)
+              source_tag="v${VLLM_REF}${RELEASE_TAG_SUFFIX}"
+              ;;
+            nightly)
+              source_tag="${NIGHTLY_TAG_PREFIX}${VLLM_REF}"
+              ;;
+            *)
+              echo "Unsupported vLLM reference type: ${REF_TYPE}" >&2
+              exit 1
+              ;;
+          esac
+
           source_image="${SOURCE_IMAGE}:${source_tag}"
           target_image="ghcr.io/${GITHUB_REPOSITORY,,}:${source_tag}"
 

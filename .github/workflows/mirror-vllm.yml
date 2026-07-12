@@ -1,10 +1,10 @@
-name: Mirror vLLM version
+name: Mirror vLLM reference
 
 on:
   workflow_dispatch:
     inputs:
-      vllm_version:
-        description: vLLM version to mirror, for example 0.23.0
+      vllm_ref:
+        description: vLLM release (0.23.0 or v0.23.0) or full nightly commit SHA
         required: true
         type: string
         default: 0.23.0
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   mirror:
-    name: Mirror requested version
+    name: Mirror requested reference
     uses: ./.github/workflows/mirror-vllm-reusable.yml
     with:
-      vllm_version: ${{ inputs.vllm_version }}
+      vllm_ref: ${{ inputs.vllm_ref }}

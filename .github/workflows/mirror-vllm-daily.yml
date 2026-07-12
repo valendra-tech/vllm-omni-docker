@@ -14,7 +14,7 @@ jobs:
     name: Find latest paired release
     runs-on: ubuntu-latest
     outputs:
-      vllm_version: ${{ steps.latest.outputs.vllm_version }}
+      vllm_ref: ${{ steps.latest.outputs.vllm_ref }}
     steps:
       - name: Find latest version with both CUDA tags
         id: latest
@@ -50,11 +50,11 @@ jobs:
           fi
 
           echo "Latest paired vLLM version: v${latest_version}"
-          echo "vllm_version=${latest_version}" >> "$GITHUB_OUTPUT"
+          echo "vllm_ref=${latest_version}" >> "$GITHUB_OUTPUT"
 
   mirror:
     name: Mirror latest version
     needs: find-latest-version
     uses: ./.github/workflows/mirror-vllm-reusable.yml
     with:
-      vllm_version: ${{ needs.find-latest-version.outputs.vllm_version }}
+      vllm_ref: ${{ needs.find-latest-version.outputs.vllm_ref }}
