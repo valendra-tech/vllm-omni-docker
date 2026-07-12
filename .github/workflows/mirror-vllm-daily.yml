@@ -39,9 +39,9 @@ jobs:
               latest_version="$version"
             fi
           done < <(
-            sed --regexp-extended \
+            sed -E \
               -n 's/^v([0-9]+\.[0-9]+\.[0-9]+)-cu129-ubuntu2404$/\1/p' \
-              "$tags_file" | sort --version-sort --unique
+              "$tags_file" | sort -t. -k1,1n -k2,2n -k3,3n -u
           )
 
           if [[ -z "$latest_version" ]]; then
