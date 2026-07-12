@@ -1,0 +1,60 @@
+name: Mirror latest vLLM image
+
+on:
+  schedule:
+    - cron: 17 3 * * *
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  find-latest-version:
+    name: Find latest paired release
+    runs-on: ubuntu-latest
+    outputs:
+      vllm_version: ${{ steps.latest.outputs.vllm_version }}
+    steps:
+      - name: Find latest version with both CUDA tags
+        id: latest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tags_file="$(mktemp)"
+          trap 'rm -f "$tags_file"' EXIT
+          next_url="https://hub.docker.com/v2/repositories/vllm/vllm-openai/tags?page_size=100&ordering=last_updated"
+
+          while [[ -n "$next_url" ]]; do
+            page="$(curl --fail --silent --show-error --location "$next_url")"
+            jq -r '.results[]?.name' <<< "$page" >> "$tags_file"
+            next_url="$(jq -r '.next // empty' <<< "$page")"
+          done
+
+          latest_version=""
+          while IFS= read -r version; do
+            if grep --fixed-strings --line-regexp --quiet \
+              "v${version}-ubuntu2404" "$tags_file"; then
+              latest_version="$version"
+            fi
+          done < <(
+            sed --regexp-extended \
+              -n 's/^v([0-9]+\.[0-9]+\.[0-9]+)-cu129-ubuntu2404$/\1/p' \
+              "$tags_file" | sort --version-sort --unique
+          )
+
+          if [[ -z "$latest_version" ]]; then
+            echo "No paired vLLM release was found on Docker Hub" >&2
+            exit 1
+          fi
+
+          echo "Latest paired vLLM version: v${latest_version}"
+          echo "vllm_version=${latest_version}" >> "$GITHUB_OUTPUT"
+
+  mirror:
+    name: Mirror latest version
+    needs: find-latest-version
+    uses: ./.github/workflows/mirror-vllm-reusable.yml
+    with:
+      vllm_version: ${{ needs.find-latest-version.outputs.vllm_version }}

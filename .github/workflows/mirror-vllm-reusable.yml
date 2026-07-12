@@ -1,0 +1,87 @@
+name: Mirror vLLM image
+
+on:
+  workflow_call:
+    inputs:
+      vllm_version:
+        description: vLLM version without the leading v
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  SOURCE_IMAGE: docker.io/vllm/vllm-openai
+
+jobs:
+  validate-version:
+    name: Validate vLLM version
+    runs-on: ubuntu-latest
+    outputs:
+      vllm_version: ${{ steps.version.outputs.vllm_version }}
+    steps:
+      - name: Normalize version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.vllm_version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="${INPUT_VERSION#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "vllm_version must match X.Y.Z or vX.Y.Z" >&2
+            exit 1
+          fi
+
+          echo "vllm_version=$version" >> "$GITHUB_OUTPUT"
+
+  mirror:
+    name: Mirror ${{ matrix.cuda }}
+    needs: validate-version
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cuda: cu129
+            tag_suffix: -cu129-ubuntu2404
+          - cuda: cu13
+            tag_suffix: -ubuntu2404
+    steps:
+      - name: Install Skopeo
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes skopeo
+
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+          GHCR_USER: ${{ github.actor }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | skopeo login ghcr.io \
+            --username "$GHCR_USER" \
+            --password-stdin
+
+      - name: Mirror image
+        env:
+          VLLM_VERSION: ${{ needs.validate-version.outputs.vllm_version }}
+          TAG_SUFFIX: ${{ matrix.tag_suffix }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          source_tag="v${VLLM_VERSION}${TAG_SUFFIX}"
+          source_image="${SOURCE_IMAGE}:${source_tag}"
+          target_image="ghcr.io/${GITHUB_REPOSITORY,,}:${source_tag}"
+
+          echo "Copying ${source_image} to ${target_image}"
+          skopeo copy --all --retry-times 3 \
+            "docker://${source_image}" \
+            "docker://${target_image}"
