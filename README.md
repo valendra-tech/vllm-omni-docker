@@ -22,8 +22,11 @@ with the corresponding image from this repository:
 ghcr.io/<owner>/<repository>:<tag>
 ```
 
-For this repository, the image name is `ghcr.io/valendra/vllm-docker` when it
-is published under the `valendra` owner.
+For this repository, the image name is:
+
+```text
+ghcr.io/valendra-tech/vllm-docker
+```
 
 ### Available tags
 
@@ -40,15 +43,27 @@ owner/name change.
 ### Pull an image
 
 ```bash
-docker pull ghcr.io/valendra/vllm-docker:v0.23.0-cu129-ubuntu2404
-docker pull ghcr.io/valendra/vllm-docker:v0.23.0-ubuntu2404
+docker pull ghcr.io/valendra-tech/vllm-docker:v0.23.0-cu129-ubuntu2404
+docker pull ghcr.io/valendra-tech/vllm-docker:v0.23.0-ubuntu2404
+```
+
+For a reproducible pull, use an immutable digest reference:
+
+```bash
+docker pull ghcr.io/valendra-tech/vllm-docker@sha256:e37c8b17a13f0a4f294472b39281ca0405a5488f4ab0f395dbdc8147e8f2db7d
+```
+
+The general digest format is:
+
+```text
+ghcr.io/valendra-tech/vllm-docker@sha256:<digest>
 ```
 
 Use the image with the normal vLLM Docker command, for example:
 
 ```bash
 docker run --gpus all --ipc=host --network host \
-  ghcr.io/valendra/vllm-docker:v0.23.0-cu129-ubuntu2404 \
+  ghcr.io/valendra-tech/vllm-docker:v0.23.0-cu129-ubuntu2404 \
   --model <model-name>
 ```
 
