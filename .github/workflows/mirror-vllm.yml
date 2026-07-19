@@ -1,13 +1,13 @@
-name: Mirror vLLM reference
+name: Mirror vLLM-Omni reference
 
 on:
   workflow_dispatch:
     inputs:
-      vllm_ref:
-        description: vLLM release (0.23.0 or v0.23.0) or full nightly commit SHA
+      vllm_omni_ref:
+        description: vLLM-Omni release (0.24.0, v0.24.0) or tag (cosmos3, latest)
         required: true
         type: string
-        default: 0.23.0
+        default: v0.24.0
 
 permissions:
   contents: read
@@ -18,4 +18,4 @@ jobs:
     name: Mirror requested reference
     uses: ./.github/workflows/mirror-vllm-reusable.yml
     with:
-      vllm_ref: ${{ inputs.vllm_ref }}
+      vllm_omni_ref: ${{ inputs.vllm_omni_ref }}

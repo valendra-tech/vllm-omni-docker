@@ -1,106 +1,109 @@
-# vLLM OpenAI GHCR mirror
+# vLLM-Omni GHCR mirror and multi-CUDA builds
 
-This repository is a GitHub Container Registry (GHCR) mirror of the official
-[`vllm/vllm-openai`](https://hub.docker.com/r/vllm/vllm-openai) container
-images. Use the GHCR image as a drop-in replacement when you want to pull the
-vLLM image from this repository instead of Docker Hub.
+This repository provides GitHub Container Registry (GHCR) images for
+[vLLM-Omni](https://github.com/vllm-project/vllm-omni) in two ways:
 
-The images are copied as published. This repository does not rebuild, modify,
-or maintain a separate vLLM implementation.
+1. **Mirror** — copies the official `vllm/vllm-omni` images from Docker Hub as-is.
+2. **Multi-CUDA builds** — builds vLLM-Omni on top of different CUDA base images, producing variants that the upstream does not publish (CUDA 12.9 and CUDA 13).
 
-## Use the mirror
+Use the GHCR image as a drop-in replacement when you want to pull from this
+repository instead of Docker Hub, or when you need a CUDA variant not available
+upstream.
 
-Replace the source image:
+## Available images
 
-```text
-docker.io/vllm/vllm-openai:<tag>
-```
-
-with the corresponding image from this repository:
+The repository publishes images at:
 
 ```text
-ghcr.io/<owner>/<repository>:<tag>
+ghcr.io/valendra-tech/vllm-omni-docker
 ```
 
-For this repository, the image name is:
+### Mirrored images (official upstream)
 
-```text
-ghcr.io/valendra-tech/vllm-docker
-```
+These are copied unchanged from `docker.io/vllm/vllm-omni`:
 
-### Available tags
+| Tag | Source |
+| --- | --- |
+| `v0.24.0` | `vllm/vllm-omni:v0.24.0` |
+| `v0.22.0` | `vllm/vllm-omni:v0.22.0` |
+| `latest` | `vllm/vllm-omni:latest` |
+| `cosmos3` | `vllm/vllm-omni:cosmos3` |
 
-The mirror currently publishes two CUDA variants for each vLLM version:
+All mirrored tags are multi-arch (amd64, arm64).
 
-| CUDA variant | Docker Hub source tag | GHCR mirror tag |
-| --- | --- | --- |
-| CUDA 12.9 (`cu129`) | `v0.23.0-cu129-ubuntu2404` | `v0.23.0-cu129-ubuntu2404` |
-| CUDA 13 (`cu13`) | `v0.23.0-ubuntu2404` | `v0.23.0-ubuntu2404` |
+### Multi-CUDA build images
 
-Nightly images can also be mirrored by their full vLLM commit SHA. The source
-uses different tag prefixes for the two CUDA variants:
+Built from vLLM-Omni source on top of `vllm/vllm-openai` base images with
+different CUDA variants. These are **not** published upstream.
 
-| CUDA variant | Docker Hub source tag | GHCR mirror tag |
-| --- | --- | --- |
-| CUDA 12.9 (`cu129`) | `cu129-nightly-<commit>` | `cu129-nightly-<commit>` |
-| CUDA 13 (`cu13`) | `nightly-<commit>` | `nightly-<commit>` |
+| CUDA variant | Tag example |
+| --- | --- |
+| CUDA 12.9 (`cu129`) | `v0.24.0-cu129` |
+| CUDA 13 (`cu13`) | `v0.24.0-cu13` |
 
-The tag is unchanged when the image is copied. Only the registry and image
-owner/name change.
-
-### Pull an image
+## Pull an image
 
 ```bash
-docker pull ghcr.io/valendra-tech/vllm-docker:v0.23.0-cu129-ubuntu2404
-docker pull ghcr.io/valendra-tech/vllm-docker:v0.23.0-ubuntu2404
+docker pull ghcr.io/valendra-tech/vllm-omni-docker:v0.24.0
+docker pull ghcr.io/valendra-tech/vllm-omni-docker:v0.24.0-cu129
+docker pull ghcr.io/valendra-tech/vllm-omni-docker:v0.24.0-cu13
 ```
 
-For a reproducible pull, use an immutable digest reference:
-
-```bash
-docker pull ghcr.io/valendra-tech/vllm-docker@sha256:e37c8b17a13f0a4f294472b39281ca0405a5488f4ab0f395dbdc8147e8f2db7d
-```
-
-The general digest format is:
-
-```text
-ghcr.io/valendra-tech/vllm-docker@sha256:<digest>
-```
-
-Use the image with the normal vLLM Docker command, for example:
-
-```bash
-docker run --gpus all --ipc=host --network host \
-  ghcr.io/valendra-tech/vllm-docker:v0.23.0-cu129-ubuntu2404 \
-  --model <model-name>
-```
-
-For a private GHCR package, authenticate before pulling with a GitHub token
-that has the `read:packages` permission:
+For a private GHCR package, authenticate before pulling:
 
 ```bash
 echo "$CR_PAT" | docker login ghcr.io -u GITHUB_USER --password-stdin
 ```
 
-## Keeping the mirror up to date
+## Run
 
-GitHub Actions keeps the GHCR package synchronized with Docker Hub:
-
-- [Mirror vLLM reference](.github/workflows/mirror-vllm.yml) manually mirrors a
-  requested release or nightly commit. Enter `0.23.0`, `v0.23.0`, or a full
-  40-character commit SHA in the **vllm_ref** input.
-- [Mirror latest vLLM image](.github/workflows/mirror-vllm-daily.yml) runs every
-  day at `03:17 UTC`, finds the newest version with both CUDA tags, and mirrors
-  both variants. It can also be started manually.
-- [Mirror vLLM image](.github/workflows/mirror-vllm-reusable.yml) contains the
-  shared copy logic and the `cu129`/`cu13` matrix.
-
-The workflows use `GITHUB_TOKEN` and publish the package as
-`ghcr.io/<owner>/<repository>`. The repository's Actions settings must allow
-the workflow to write packages:
-
-```yaml
-permissions:
-  contents: read
-  packages: write
+```bash
+docker run --gpus all --ipc=host --network host \
+  ghcr.io/valendra-tech/vllm-omni-docker:v0.24.0-cu129 \
+  --model <model-name>
 ```
+
+## Keeping images up to date
+
+### Mirror workflows
+
+- [Mirror vLLM-Omni reference](.github/workflows/mirror-vllm.yml) — manually
+  mirror a requested tag. Enter `v0.24.0`, `0.24.0`, `cosmos3`, or `latest`.
+- [Mirror latest vLLM-Omni image](.github/workflows/mirror-vllm-daily.yml) —
+  runs daily at `03:17 UTC`, finds the newest release tag and mirrors it. Can
+  also be started manually.
+- [Mirror vLLM-Omni image](.github/workflows/mirror-vllm-reusable.yml) —
+  reusable copy logic shared by the workflows above.
+
+### Build workflow (multi-CUDA)
+
+- [Build vLLM-Omni multi-CUDA](.github/workflows/build.yml) — builds vLLM-Omni
+  for multiple CUDA variants in parallel using a matrix. Inputs:
+  - `vllm_omni_version`: git tag or branch to clone (default: `v0.24.0`)
+  - `vllm_base_version`: matching vLLM base version (default: `0.24.0`)
+
+The build workflow produces two images per vLLM-Omni version:
+
+| CUDA | Tag | Base image |
+| --- | --- | --- |
+| CUDA 12.9 | `v0.24.0-cu129` | `vllm/vllm-openai:v0.24.0-cu129-ubuntu2404` |
+| CUDA 13 | `v0.24.0-cu13` | `vllm/vllm-openai:v0.24.0-ubuntu2404` |
+
+## How the Dockerfile works
+
+The `Dockerfile` at the repository root:
+
+1. Starts from a `vllm/vllm-openai` base image with the target CUDA version.
+2. Clones the vLLM-Omni source at the requested version.
+3. Installs the vLLM-Omni Python package on top.
+
+The vLLM base image provides the CUDA toolkit, PyTorch, and vLLM core. The
+vLLM-Omni layer adds omni-modality support (audio, image/video, TTS, diffusion,
+robot policies).
+
+Build args:
+
+| Arg | Default | Description |
+| --- | --- | --- |
+| `VLLM_OMNI_VERSION` | `main` | vLLM-Omni git tag or branch |
+| `BASE_IMAGE` | `vllm/vllm-openai:v0.25.0` | vLLM base image with CUDA variant |
