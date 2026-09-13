@@ -15,7 +15,7 @@ RUN git clone --depth 1 --branch "${VLLM_OMNI_VERSION}" \
     https://github.com/vllm-project/vllm-omni.git /app/vllm-omni
 
 RUN cd /app/vllm-omni && \
-    uv pip install --python "$(python3 -c 'import sys; print(sys.executable)')" --no-cache-dir "."
+    uv pip install --python "$(python3 -c 'import sys; print(sys.executable)')" --no-cache-dir ".[dev]"
 
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
