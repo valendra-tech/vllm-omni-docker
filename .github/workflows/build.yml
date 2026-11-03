@@ -17,7 +17,7 @@ on:
         description: Target platforms (comma-separated)
         required: false
         type: string
-        default: linux/amd64
+        default: linux/amd64,linux/arm64
 
 permissions:
   contents: read
@@ -43,6 +43,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

@@ -81,8 +81,13 @@ docker run --gpus all --ipc=host --network host \
   for multiple CUDA variants in parallel using a matrix. Inputs:
   - `vllm_omni_version`: git tag or branch to clone (default: `v0.24.0`)
   - `vllm_base_version`: matching vLLM base version (default: `0.24.0`)
+  - `platforms`: target platforms (default: `linux/amd64,linux/arm64`)
 
 The build workflow produces two images per vLLM-Omni version:
+
+Both platforms are built by default using QEMU for non-native builds. Existing
+tags must be rebuilt before they contain ARM64 images; changing this workflow
+does not alter previously published tags.
 
 | CUDA | Tag | Base image |
 | --- | --- | --- |
